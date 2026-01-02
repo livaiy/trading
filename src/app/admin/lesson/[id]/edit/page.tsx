@@ -10,7 +10,6 @@ export default function EditLesson() {
   const [form, setForm] = useState({
     title: "",
     content: "",
-    video_url: "",
     topic_id: "",
     order_index: 1,
   });
@@ -25,7 +24,6 @@ export default function EditLesson() {
       setForm({
         title: data.title,
         content: data.content ?? "",
-        video_url: data.video_url ?? "",
         topic_id: data.topic_id ?? "",
         order_index: data.order_index ?? 1,
       });
@@ -66,13 +64,6 @@ export default function EditLesson() {
           placeholder="Content"
           value={form.content}
           onChange={(e) => setForm({ ...form, content: e.target.value })}
-        />
-
-        <input
-          className="border p-2"
-          placeholder="Video URL"
-          value={form.video_url}
-          onChange={(e) => setForm({ ...form, video_url: e.target.value })}
         />
 
         <input

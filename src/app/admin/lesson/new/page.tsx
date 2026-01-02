@@ -9,7 +9,6 @@ export default function NewLesson() {
   const [form, setForm] = useState({
     title: "",
     content: "",
-    video_url: "",
     topic_id: "",
     order_index: 1,
   });
@@ -53,12 +52,6 @@ export default function NewLesson() {
           onChange={(e) => setForm({ ...form, content: e.target.value })}
         />
 
-        <input
-          className="border p-2"
-          placeholder="Video URL"
-          value={form.video_url}
-          onChange={(e) => setForm({ ...form, video_url: e.target.value })}
-        />
 
         {/* DROPDOWN TOPIC */}
         <select

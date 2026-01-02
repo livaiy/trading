@@ -2,15 +2,17 @@
 
 import { useAuth } from '@/components/providers/AuthProvider'
 import Link from 'next/link'
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { UserIcon, PencilIcon, CheckIcon, XMarkIcon, PhotoIcon, KeyIcon } from '@heroicons/react/24/outline'
 import { updateProfile, updatePassword } from '@/lib/auth'
 
 export default function ProfilePage() {
-  const { user } = useAuth()
+  const { user, profile: ctxProfile, refreshProfile } = useAuth()
   const supabase = createClient()
   const [profile, setProfile] = useState<any>(null)
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
+  const [initialized, setInitialized] = useState(false)
 
   // Edit states
   const [editingName, setEditingName] = useState(false)
@@ -29,26 +31,52 @@ export default function ProfilePage() {
 
   // Update profile data when profile changes
   useEffect(() => {
-    if (profile) {
-      setNewName(profile.full_name || '')
+    if (profile?.full_name) {
+      setNewName(profile.full_name)
+    } else if ((user as any)?.user_metadata?.full_name) {
+      setNewName((user as any).user_metadata.full_name)
+    } else if (user?.email) {
+      setNewName(user.email.split('@')[0])
     }
-  }, [profile])
+  }, [profile, user])
 
   useEffect(() => {
-    if (!user) return
+    if (ctxProfile) {
+      setProfile(ctxProfile)
+      setInitialized(true)
+    } else if (user && !initialized) {
+      refreshProfile().finally(() => setInitialized(true))
+    }
+  }, [ctxProfile, user, refreshProfile, initialized])
 
-    const getProfile = async () => {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('full_name, avatar_url, profile_photo, membership_type')
-        .eq('id', user.id)
-        .single()
+  // Compute derived values
+  const displayName = useMemo(() => {
+    if (profile?.full_name) return profile.full_name
+    return (user as any)?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Belum diatur'
+  }, [profile?.full_name, user])
 
-      if (!error) setProfile(data)
+  const userRoleLabel = useMemo(() => {
+    if (profile?.is_admin) return 'Admin'
+    if (profile?.membership_type === 'premium') return 'Premium'
+    return 'Gratis'
+  }, [profile?.is_admin, profile?.membership_type])
+
+  useEffect(() => {
+    if (!profile && !user) return
+
+    const preferredAvatar = profile?.avatar_url || profile?.profile_photo || (user as any)?.user_metadata?.avatar_url
+    if (preferredAvatar) {
+      if (preferredAvatar.startsWith('http')) {
+        setAvatarUrl(preferredAvatar)
+      } else {
+        const { data } = supabase.storage.from('avatars').getPublicUrl(preferredAvatar)
+        setAvatarUrl(data?.publicUrl || null)
+      }
+      return
     }
 
-    getProfile()
-  }, [user, supabase])
+    setAvatarUrl(null)
+  }, [profile, supabase, user])
 
   // Handle name update
   const handleUpdateName = async () => {
@@ -66,7 +94,8 @@ export default function ProfilePage() {
       setMessage('Gagal mengupdate nama: ' + error.message)
     } else {
       setMessage('Nama berhasil diupdate!')
-      setProfile({ ...profile, full_name: newName.trim() })
+      await refreshProfile()
+      setProfile((prev: any) => ({ ...prev, full_name: newName.trim() }))
       setEditingName(false)
     }
 
@@ -108,7 +137,8 @@ export default function ProfilePage() {
       }
 
       setMessage('Foto profil berhasil diupdate!')
-      setProfile({ ...profile, avatar_url: publicUrl })
+      await refreshProfile()
+      setProfile((prev: any) => ({ ...prev, avatar_url: publicUrl }))
       setEditingAvatar(false)
       setAvatarFile(null)
     } catch (error: any) {
@@ -185,11 +215,11 @@ export default function ProfilePage() {
         </div>
 
         <div className="flex items-center space-x-6">
-          {profile?.avatar_url ? (
+          {avatarUrl ? (
             <img
-              src={profile.avatar_url}
-              alt={profile.full_name || 'User'}
-              className="w-24 h-24 rounded-full border shadow"
+              src={avatarUrl}
+              alt={displayName || 'User'}
+              className="w-24 h-24 rounded-full border shadow object-cover"
             />
           ) : (
             <UserIcon className="h-24 w-24 text-primary-600" />
@@ -273,7 +303,7 @@ export default function ProfilePage() {
                 </button>
               </div>
             ) : (
-              <p className="text-lg">{profile?.full_name || 'Belum diatur'}</p>
+              <p className="text-lg">{displayName}</p>
             )}
           </div>
 
@@ -282,28 +312,30 @@ export default function ProfilePage() {
             <p className="text-lg">{user.email}</p>
           </div>
 
-          {profile?.membership_type && (
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1">Status Keanggotaan</label>
-              {profile.membership_type === 'premium' ? (
-                <span className="inline-block px-4 py-1.5 text-sm font-medium rounded-full bg-yellow-100 text-yellow-800">
-                  ⭐ PREMIUM
+
+
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-1">Status Keanggotaan</label>
+            {profile?.membership_type === 'premium' ? (
+              <span className="inline-block px-4 py-1.5 text-sm font-medium rounded-full bg-yellow-100 text-yellow-800">
+                ⭐ PREMIUM
+              </span>
+            ) : (
+              <div className="flex items-center space-x-4">
+                <span className="inline-block px-4 py-1.5 text-sm font-medium rounded-full bg-gray-100 text-gray-800">
+                  FREE
                 </span>
-              ) : (
-                <div className="flex items-center space-x-4">
-                  <span className="inline-block px-4 py-1.5 text-sm font-medium rounded-full bg-gray-100 text-gray-800">
-                    FREE
-                  </span>
+                {!profile?.is_admin && (
                   <button
                     onClick={() => window.open('/upgrade', '_blank')}
                     className="inline-block px-6 py-2 text-sm font-medium rounded-full bg-gradient-to-r from-yellow-400 to-yellow-600 text-white hover:from-yellow-500 hover:to-yellow-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105"
                   >
                     <span className="mr-2">⭐</span> Upgrade to Premium
                   </button>
-                </div>
-              )}
-            </div>
-          )}
+                )}
+              </div>
+            )}
+          </div>
         </div>
       </div>
 

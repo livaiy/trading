@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
@@ -18,6 +18,11 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [containerClass, setContainerClass] = useState('');
+  const [pageState, setPageState] = useState('');
+  const gradientDelay = useMemo(
+    () => `-${(Date.now() % 15000) / 1000}s`,
+    []
+  );
   const router = useRouter();
  
   // If user arrives at login after starting a password recovery, clear recovery flag
@@ -28,6 +33,7 @@ export default function LoginPage() {
     
     // Set initial container class
     setContainerClass('close');
+    setPageState('page-ready');
   }, []);
   
   const {
@@ -83,15 +89,19 @@ export default function LoginPage() {
   const handleRegisterClick = (e: React.MouseEvent) => {
     e.preventDefault();
     setContainerClass('active');
+    setPageState('page-leaving');
     setTimeout(() => {
       router.push('/register');
     }, 300);
   };
 
   return (
-    <div className="auth-page-wrapper">
-      <div className={`auth-container ${containerClass}`}>
-        <div className="auth-form-section left">
+    <div
+      className={`auth-page-wrapper ${pageState}`}
+      style={{ ['--authGradientDelay' as any]: gradientDelay }}
+    >
+      <div className={`auth-container ${containerClass} ${pageState === 'page-leaving' ? 'is-leaving' : ''}`}>
+        <div className="auth-form-section left form-panel">
           <div className="auth-content">
             <h1>Log In</h1>
             <form className="auth-form" onSubmit={handleSubmit(onSubmit)}>
@@ -191,16 +201,16 @@ export default function LoginPage() {
           </div>
         </div>
         
-        <div className="auth-form-section right auth-gradient-panel front">
+        <div className="auth-form-section right auth-gradient-panel front info-panel">
           <div className="auth-content" style={{ color: '#fff' }}>
+            
             <svg xmlns="http://www.w3.org/2000/svg" width="96" height="96" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ margin: '0 auto 1em', display: 'block' }}>
-              <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-              <circle cx="8.5" cy="7" r="4"/>
-              <line x1="20" y1="8" x2="20" y2="14"/>
-              <line x1="23" y1="11" x2="17" y2="11"/>
+              <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/>
+              <polyline points="10 17 15 12 10 7"/>
+              <line x1="15" y1="12" x2="3" y2="12"/>
             </svg>
-            <h1 style={{ color: '#fff', marginBottom: '0.5em' }}>Hello, friend!</h1>
-            <p style={{ color: '#fff', margin: '2em auto', fontSize: '1.4em' }}>Enter your personal details and start journey with us</p>
+            <h1 style={{ color: '#fff', marginBottom: '0.5em' }}>Welcome Back!</h1>
+            <p style={{ color: '#fff', margin: '2em auto', fontSize: '1.4em' }}>To keep connected with us please login with your personal info</p>
             <button type="button" className="auth-button" onClick={handleRegisterClick} style={{ borderColor: '#fff', background: 'transparent', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5em' }}>
               <span>Register</span>
               <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>

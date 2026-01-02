@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { resetPassword } from '@/lib/auth';
 import { toast } from 'react-hot-toast';
@@ -13,7 +13,16 @@ interface ForgotFormData {
 
 export default function ForgotPasswordPage() {
   const [isLoading, setIsLoading] = useState(false);
+  const [pageState, setPageState] = useState('');
+  const gradientDelay = useMemo(
+    () => `-${(Date.now() % 15000) / 1000}s`,
+    []
+  );
   const { register, handleSubmit, formState: { errors } } = useForm<ForgotFormData>();
+
+  useEffect(() => {
+    setPageState('page-ready');
+  }, []);
 
   const onSubmit = async (data: ForgotFormData) => {
     setIsLoading(true);
@@ -33,7 +42,10 @@ export default function ForgotPasswordPage() {
   };
 
   return (
-    <div className="auth-page-wrapper">
+    <div
+      className={`auth-page-wrapper ${pageState}`}
+      style={{ ['--authGradientDelay' as any]: gradientDelay }}
+    >
       <div className="forgot-password-container">
         <h1>Forgot your password?</h1>
         <p>Enter your email and we'll send you a reset link.</p>

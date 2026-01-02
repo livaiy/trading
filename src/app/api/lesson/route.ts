@@ -20,7 +20,7 @@ export async function POST(req: Request) {
   const supabase = createRouteHandlerClient({ cookies });
   const body = await req.json().catch(() => ({}));
 
-  const { title, description,video_url,content , topic_id, order_index } = body;
+  const { title, description,content , topic_id, order_index } = body;
 
   // Validasi input
   if (!title || !topic_id) {
@@ -57,7 +57,6 @@ export async function POST(req: Request) {
       topic_id,
       title,
       description: description ?? null,
-      video_url: video_url ?? null,
       content: content ?? null,
       order_index: order_index ?? 1,
     },
